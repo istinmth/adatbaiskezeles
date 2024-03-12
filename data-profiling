@@ -1,0 +1,685 @@
+{
+    "metadata": {
+        "kernelspec": {
+            "name": "SQL",
+            "display_name": "SQL",
+            "language": "sql"
+        },
+        "language_info": {
+            "name": "sql",
+            "version": ""
+        }
+    },
+    "nbformat_minor": 2,
+    "nbformat": 4,
+    "cells": [
+        {
+            "cell_type": "markdown",
+            "source": [
+                "Összesen 7 különböző fizetést lehet elérni"
+            ],
+            "metadata": {
+                "azdata_cell_guid": "0de177b1-d53b-4da6-9b0e-651c324d3028"
+            },
+            "attachments": {}
+        },
+        {
+            "cell_type": "code",
+            "source": [
+                "SELECT COUNT(DISTINCT oradij) AS EgyediÉrtékek\n",
+                "FROM munka"
+            ],
+            "metadata": {
+                "azdata_cell_guid": "ce85b765-8702-48f7-a7a4-b3c8fcdb574f",
+                "language": "sql",
+                "tags": [
+                    "hide_input"
+                ]
+            },
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "(1 row affected)"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "Total execution time: 00:00:00.027"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "execute_result",
+                    "metadata": {},
+                    "execution_count": 35,
+                    "data": {
+                        "application/vnd.dataresource+json": {
+                            "schema": {
+                                "fields": [
+                                    {
+                                        "name": "EgyediÉrtékek"
+                                    }
+                                ]
+                            },
+                            "data": [
+                                {
+                                    "EgyediÉrtékek": "7"
+                                }
+                            ]
+                        },
+                        "text/html": [
+                            "<table>",
+                            "<tr><th>EgyediÉrtékek</th></tr>",
+                            "<tr><td>7</td></tr>",
+                            "</table>"
+                        ]
+                    }
+                }
+            ],
+            "execution_count": 35
+        },
+        {
+            "cell_type": "markdown",
+            "source": [
+                "Legkisebb, legnagyobb, átlagos és medián fizetés, illetve szórás óránként a diákmunkáknál."
+            ],
+            "metadata": {
+                "azdata_cell_guid": "5d9e64cc-1636-4548-8ef4-470e81f61061"
+            },
+            "attachments": {}
+        },
+        {
+            "cell_type": "code",
+            "source": [
+                "SELECT \n",
+                "    MIN(oradij) AS 'Min',\n",
+                "    MAX(oradij) AS 'Max',\n",
+                "    AVG(oradij) AS 'Avg',\n",
+                "    (SELECT oradij FROM \n",
+                "        (SELECT oradij, ROW_NUMBER() OVER (ORDER BY oradij) AS rn, COUNT(*) OVER () AS cnt\n",
+                "         FROM munka) sub\n",
+                "     WHERE rn IN (FLOOR((cnt + 1) / 2.0), CEILING((cnt + 1) / 2.0))) AS Median,\n",
+                "     STDEV(oradij) AS Stddev\n",
+                "FROM munka"
+            ],
+            "metadata": {
+                "azdata_cell_guid": "451913da-f3e1-4dd9-bdef-dd3da14d8bbf",
+                "language": "sql"
+            },
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "(1 row affected)"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "Total execution time: 00:00:00.028"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "execute_result",
+                    "metadata": {},
+                    "execution_count": 26,
+                    "data": {
+                        "application/vnd.dataresource+json": {
+                            "schema": {
+                                "fields": [
+                                    {
+                                        "name": "Min"
+                                    },
+                                    {
+                                        "name": "Max"
+                                    },
+                                    {
+                                        "name": "Avg"
+                                    },
+                                    {
+                                        "name": "Median"
+                                    },
+                                    {
+                                        "name": "Stddev"
+                                    }
+                                ]
+                            },
+                            "data": [
+                                {
+                                    "Min": "200",
+                                    "Max": "500",
+                                    "Avg": "346",
+                                    "Median": "350",
+                                    "Stddev": "82,4547178019844"
+                                }
+                            ]
+                        },
+                        "text/html": [
+                            "<table>",
+                            "<tr><th>Min</th><th>Max</th><th>Avg</th><th>Median</th><th>Stddev</th></tr>",
+                            "<tr><td>200</td><td>500</td><td>346</td><td>350</td><td>82,4547178019844</td></tr>",
+                            "</table>"
+                        ]
+                    }
+                }
+            ],
+            "execution_count": 26
+        },
+        {
+            "cell_type": "markdown",
+            "source": [
+                "Első és harmadik kvantilis, illetve interkvantilis terjedelem a fizetésekhez."
+            ],
+            "metadata": {
+                "language": "sql",
+                "azdata_cell_guid": "05a4508c-77c1-48ed-8266-f52b3174abcd"
+            },
+            "attachments": {}
+        },
+        {
+            "cell_type": "code",
+            "source": [
+                "SELECT \n",
+                "    count(oradij) AS 'Hanyfele',\n",
+                "    (SELECT oradij FROM \n",
+                "        (SELECT oradij, ROW_NUMBER() OVER (ORDER BY oradij) AS rn, COUNT(*) OVER () AS cnt\n",
+                "         FROM munka) sub\n",
+                "     WHERE rn = FLOOR((cnt + 1) / 4.0)) AS Q1,\n",
+                "    (SELECT oradij FROM \n",
+                "        (SELECT oradij, ROW_NUMBER() OVER (ORDER BY oradij) AS rn, COUNT(*) OVER () AS cnt\n",
+                "         FROM munka) sub\n",
+                "     WHERE rn = FLOOR((cnt + 1) * 3 / 4.0)) AS Q3,\n",
+                "    ((SELECT oradij FROM \n",
+                "        (SELECT oradij, ROW_NUMBER() OVER (ORDER BY oradij) AS rn, COUNT(*) OVER () AS cnt\n",
+                "         FROM munka) sub\n",
+                "     WHERE rn = FLOOR((cnt + 1) * 3 / 4.0))\n",
+                "    -\n",
+                "    (SELECT oradij FROM \n",
+                "        (SELECT oradij, ROW_NUMBER() OVER (ORDER BY oradij) AS rn, COUNT(*) OVER () AS cnt\n",
+                "         FROM munka) sub\n",
+                "     WHERE rn = FLOOR((cnt + 1) / 4.0))) AS IQR\n",
+                "FROM munka"
+            ],
+            "metadata": {
+                "language": "sql",
+                "azdata_cell_guid": "04e8b422-7c50-4a1d-8583-a67aa3d31018"
+            },
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "(1 row affected)"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "Total execution time: 00:00:00.109"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "execute_result",
+                    "metadata": {},
+                    "execution_count": 33,
+                    "data": {
+                        "application/vnd.dataresource+json": {
+                            "schema": {
+                                "fields": [
+                                    {
+                                        "name": "Hanyfele"
+                                    },
+                                    {
+                                        "name": "Q1"
+                                    },
+                                    {
+                                        "name": "Q3"
+                                    },
+                                    {
+                                        "name": "IQR"
+                                    }
+                                ]
+                            },
+                            "data": [
+                                {
+                                    "Hanyfele": "41",
+                                    "Q1": "300",
+                                    "Q3": "400",
+                                    "IQR": "100"
+                                }
+                            ]
+                        },
+                        "text/html": [
+                            "<table>",
+                            "<tr><th>Hanyfele</th><th>Q1</th><th>Q3</th><th>IQR</th></tr>",
+                            "<tr><td>41</td><td>300</td><td>400</td><td>100</td></tr>",
+                            "</table>"
+                        ]
+                    }
+                }
+            ],
+            "execution_count": 33
+        },
+        {
+            "cell_type": "markdown",
+            "source": [
+                "Átlagos eltérés az átlagfizetéshez képest: **~82Ft**"
+            ],
+            "metadata": {
+                "azdata_cell_guid": "f88ddb22-6753-4be8-b609-d79fb98de864"
+            },
+            "attachments": {}
+        },
+        {
+            "cell_type": "code",
+            "source": [
+                "SELECT AVG(oradij) AS oradij_atlagos,\n",
+                "    STDEV(oradij) AS oradij_stddev\n",
+                "FROM munka;"
+            ],
+            "metadata": {
+                "azdata_cell_guid": "2e059525-6d6d-4e00-8afb-26457634e3a4",
+                "language": "sql",
+                "tags": []
+            },
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "(1 row affected)"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "Total execution time: 00:00:00.020"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "execute_result",
+                    "metadata": {},
+                    "execution_count": 9,
+                    "data": {
+                        "application/vnd.dataresource+json": {
+                            "schema": {
+                                "fields": [
+                                    {
+                                        "name": "oradij_atlagos"
+                                    },
+                                    {
+                                        "name": "oradij_stddev"
+                                    }
+                                ]
+                            },
+                            "data": [
+                                {
+                                    "oradij_atlagos": "346",
+                                    "oradij_stddev": "82,4547178019844"
+                                }
+                            ]
+                        },
+                        "text/html": [
+                            "<table>",
+                            "<tr><th>oradij_atlagos</th><th>oradij_stddev</th></tr>",
+                            "<tr><td>346</td><td>82,4547178019844</td></tr>",
+                            "</table>"
+                        ]
+                    }
+                }
+            ],
+            "execution_count": 9
+        },
+        {
+            "cell_type": "markdown",
+            "source": [
+                "Az 5 leggyakoribb munka:"
+            ],
+            "metadata": {
+                "azdata_cell_guid": "4030c2f2-1be2-4f8b-bda4-2d16e33004bc"
+            },
+            "attachments": {}
+        },
+        {
+            "cell_type": "code",
+            "source": [
+                "SELECT TOP 5 allas, COUNT(*) AS 'Hany?'\n",
+                "FROM munka\n",
+                "GROUP BY allas\n",
+                "ORDER BY 'Hany?' DESC"
+            ],
+            "metadata": {
+                "azdata_cell_guid": "dc0b00ee-1d58-4c79-b158-2ca9b2a39672",
+                "language": "sql"
+            },
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "(5 rows affected)"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "Total execution time: 00:00:00.262"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "execute_result",
+                    "metadata": {},
+                    "execution_count": 42,
+                    "data": {
+                        "application/vnd.dataresource+json": {
+                            "schema": {
+                                "fields": [
+                                    {
+                                        "name": "allas"
+                                    },
+                                    {
+                                        "name": "Hany?"
+                                    }
+                                ]
+                            },
+                            "data": [
+                                {
+                                    "allas": "eladó",
+                                    "Hany?": "12"
+                                },
+                                {
+                                    "allas": "takarító",
+                                    "Hany?": "9"
+                                },
+                                {
+                                    "allas": "ruhatáros",
+                                    "Hany?": "6"
+                                },
+                                {
+                                    "allas": "kisegítő",
+                                    "Hany?": "4"
+                                },
+                                {
+                                    "allas": "raktáros",
+                                    "Hany?": "4"
+                                }
+                            ]
+                        },
+                        "text/html": [
+                            "<table>",
+                            "<tr><th>allas</th><th>Hany?</th></tr>",
+                            "<tr><td>eladó</td><td>12</td></tr>",
+                            "<tr><td>takarító</td><td>9</td></tr>",
+                            "<tr><td>ruhatáros</td><td>6</td></tr>",
+                            "<tr><td>kisegítő</td><td>4</td></tr>",
+                            "<tr><td>raktáros</td><td>4</td></tr>",
+                            "</table>"
+                        ]
+                    }
+                }
+            ],
+            "execution_count": 42
+        },
+        {
+            "cell_type": "markdown",
+            "source": [
+                "Szövegtulajdonságok"
+            ],
+            "metadata": {
+                "language": "sql",
+                "azdata_cell_guid": "62c7c7cf-7ed2-4941-8253-4c459d7adda9"
+            },
+            "attachments": {}
+        },
+        {
+            "cell_type": "code",
+            "source": [
+                "SELECT MIN(LEN(allas)) AS szoveghossz_min, \n",
+                "       MAX(LEN(allas)) AS szoveghossz_max, \n",
+                "       AVG(LEN(allas)) AS szoveghossz_avg, \n",
+                "       STDEV(LEN(allas)) AS szoveghossz_stddev, \n",
+                "       VAR(LEN(allas)) AS szoveghossz_var\n",
+                "FROM munka\n",
+                "WHERE allas IS NOT NULL\n",
+                "AND LEN(allas) > 0"
+            ],
+            "metadata": {
+                "language": "sql",
+                "azdata_cell_guid": "73b7a8c5-86d3-4d4d-993c-f93e7c75e599"
+            },
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "(1 row affected)"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "Total execution time: 00:00:00.223"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "execute_result",
+                    "metadata": {},
+                    "execution_count": 44,
+                    "data": {
+                        "application/vnd.dataresource+json": {
+                            "schema": {
+                                "fields": [
+                                    {
+                                        "name": "szoveghossz_min"
+                                    },
+                                    {
+                                        "name": "szoveghossz_max"
+                                    },
+                                    {
+                                        "name": "szoveghossz_avg"
+                                    },
+                                    {
+                                        "name": "szoveghossz_stddev"
+                                    },
+                                    {
+                                        "name": "szoveghossz_var"
+                                    }
+                                ]
+                            },
+                            "data": [
+                                {
+                                    "szoveghossz_min": "5",
+                                    "szoveghossz_max": "26",
+                                    "szoveghossz_avg": "7",
+                                    "szoveghossz_stddev": "3,353920167178235",
+                                    "szoveghossz_var": "11,24878048780488"
+                                }
+                            ]
+                        },
+                        "text/html": [
+                            "<table>",
+                            "<tr><th>szoveghossz_min</th><th>szoveghossz_max</th><th>szoveghossz_avg</th><th>szoveghossz_stddev</th><th>szoveghossz_var</th></tr>",
+                            "<tr><td>5</td><td>26</td><td>7</td><td>3,353920167178235</td><td>11,24878048780488</td></tr>",
+                            "</table>"
+                        ]
+                    }
+                }
+            ],
+            "execution_count": 44
+        },
+        {
+            "cell_type": "markdown",
+            "source": [
+                "Nullértékek: nincs"
+            ],
+            "metadata": {
+                "language": "sql",
+                "azdata_cell_guid": "be96d3fb-51a1-4884-9734-610e83bae79a"
+            },
+            "attachments": {}
+        },
+        {
+            "cell_type": "code",
+            "source": [
+                "SELECT row_type AS 'Sortípus',\n",
+                "    COUNT(*) AS 'Hány darab'\n",
+                "FROM\n",
+                "    (SELECT\n",
+                "        CASE WHEN allas IS NULL THEN 'Null'\n",
+                "            ELSE 'Nem üres' \n",
+                "            END AS row_type\n",
+                "    FROM munka) rows\n",
+                "GROUP BY row_type"
+            ],
+            "metadata": {
+                "language": "sql",
+                "azdata_cell_guid": "2feb3632-c8ec-472c-9242-38c8e125ee87"
+            },
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "(1 row affected)"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "Total execution time: 00:00:00.081"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "execute_result",
+                    "metadata": {},
+                    "execution_count": 53,
+                    "data": {
+                        "application/vnd.dataresource+json": {
+                            "schema": {
+                                "fields": [
+                                    {
+                                        "name": "Sortípus"
+                                    },
+                                    {
+                                        "name": "Hány darab"
+                                    }
+                                ]
+                            },
+                            "data": [
+                                {
+                                    "Sortípus": "Nem üres",
+                                    "Hány darab": "41"
+                                }
+                            ]
+                        },
+                        "text/html": [
+                            "<table>",
+                            "<tr><th>Sortípus</th><th>Hány darab</th></tr>",
+                            "<tr><td>Nem üres</td><td>41</td></tr>",
+                            "</table>"
+                        ]
+                    }
+                }
+            ],
+            "execution_count": 53
+        },
+        {
+            "cell_type": "markdown",
+            "source": [
+                "+1  | <span style=\"font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: var(--vscode-foreground);\">Az adatbázisban a DiakAz oszlop 76%a tartalmaz csak adatot, vagyis ennyi a betöltött állás.</span>"
+            ],
+            "metadata": {
+                "azdata_cell_guid": "f6a1c3ef-4bf2-492d-ae3e-4ad1fa6eab54"
+            },
+            "attachments": {}
+        },
+        {
+            "cell_type": "code",
+            "source": [
+                "SELECT\n",
+                "    (SUM(CASE WHEN DiakAz IS NULL THEN 1 ELSE 0 END) * 100.0) / COUNT(*) AS Nullértékek,\n",
+                "    (SUM(CASE WHEN DiakAz IS NOT NULL THEN 1 ELSE 0 END) * 100.0) / COUNT(*) AS Kitöltöttek\n",
+                "FROM munka"
+            ],
+            "metadata": {
+                "azdata_cell_guid": "7e356530-9c0a-4307-b968-b9d65961c92b",
+                "language": "sql"
+            },
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "(1 row affected)"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": "Total execution time: 00:00:00.027"
+                    },
+                    "metadata": {}
+                },
+                {
+                    "output_type": "execute_result",
+                    "metadata": {
+                        "azdata_chartOptions": {
+                            "type": "doughnut",
+                            "dataDirection": "horizontal",
+                            "columnsAsLabels": true,
+                            "labelFirstColumn": false,
+                            "legendPosition": "top"
+                        }
+                    },
+                    "execution_count": 8,
+                    "data": {
+                        "application/vnd.dataresource+json": {
+                            "schema": {
+                                "fields": [
+                                    {
+                                        "name": "Nullértékek"
+                                    },
+                                    {
+                                        "name": "Kitöltöttek"
+                                    }
+                                ]
+                            },
+                            "data": [
+                                {
+                                    "Nullértékek": "24.390243902439",
+                                    "Kitöltöttek": "75.609756097560"
+                                }
+                            ]
+                        },
+                        "text/html": [
+                            "<table>",
+                            "<tr><th>Nullértékek</th><th>Kitöltöttek</th></tr>",
+                            "<tr><td>24.390243902439</td><td>75.609756097560</td></tr>",
+                            "</table>"
+                        ]
+                    }
+                }
+            ],
+            "execution_count": 8
+        },
+        {
+            "cell_type": "markdown",
+            "source": [
+                ""
+            ],
+            "metadata": {
+                "azdata_cell_guid": "0042ac94-ee05-44a6-81aa-6484e5fa9398"
+            }
+        }
+    ]
+}
